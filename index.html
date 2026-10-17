@@ -2,11 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Arrows — Logic Maze Puzzle Game</title>
-  <!-- Telegram WebApp SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,11 +24,6 @@
       background-color: #ffffff;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       color: #111827;
-      padding-top: env(safe-area-inset-top, 0px);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-    }
-    #canvasContainer, #gameCanvas {
-      touch-action: none;
     }
     .soft-circle-btn {
       background-color: #eaecf8;
@@ -83,7 +75,7 @@
 </head>
 <body class="flex flex-col h-screen w-screen bg-white select-none overflow-hidden">
 
-  <!-- TOP NAVIGATION BAR -->
+  <!-- TOP NAVIGATION BAR (Matches Video UI) -->
   <header class="w-full bg-white z-20 shrink-0">
     <div class="max-w-4xl mx-auto px-3 sm:px-5 pt-2.5 pb-2 flex items-center justify-between gap-2">
       <!-- Left Action Buttons: Levels/Back, Restart, Shuffle -->
@@ -121,31 +113,34 @@
           <span id="txtDifficulty" class="text-xs font-extrabold tracking-wide text-blue-500">Hard</span>
         </div>
         <div id="heartsContainer" class="flex items-center gap-1.5">
-          <!-- Populated dynamically -->
+          <!-- Populated dynamically by renderHearts() -->
         </div>
       </div>
 
-      <!-- Right: Auto-Step & Hint Button -->
-      <div class="flex items-center gap-2">
+      <!-- Right: Limited Auto-Step (1/1) & Limited Hint (2/2) -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
         <div class="flex items-center bg-[#eaecf8] rounded-full p-0.5 pr-2 shadow-sm">
-          <button id="btnStep" type="button" title="Auto-Clear 1 Arrow" class="soft-circle-btn px-2.5 h-8 rounded-full flex items-center gap-1 text-xs font-bold">
+          <button id="btnStep" type="button" title="Auto-Clear 1 Arrow (Limited to 1 per level)" class="soft-circle-btn px-2.5 h-8 rounded-full flex items-center gap-1 text-xs font-bold">
             <span>⚡</span>
             <span class="hidden sm:inline">Step</span>
           </button>
-          <span id="txtStepQuota" class="px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold leading-none">3/3</span>
+          <span id="txtStepQuota" class="px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold leading-none">1/1</span>
         </div>
-        <button id="btnHint" type="button" title="Show Hint (H)" class="hint-pill-btn px-3.5 h-9 rounded-full flex items-center gap-1.5 text-xs sm:text-sm font-bold">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 18h6"/>
-            <path d="M10 22h4"/>
-            <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>
-          </svg>
-          <span>Hint</span>
-        </button>
+        <div class="flex items-center bg-[#3b46d4] rounded-full p-0.5 pr-2 shadow-sm">
+          <button id="btnHint" type="button" title="Show Hint (H) — Limited to 2 per level" class="hint-pill-btn px-3 h-8 rounded-full flex items-center gap-1 text-xs sm:text-sm font-bold">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18h6"/>
+              <path d="M10 22h4"/>
+              <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>
+            </svg>
+            <span>Hint</span>
+          </button>
+          <span id="txtHintQuota" class="px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-extrabold leading-none">2/2</span>
+        </div>
       </div>
     </div>
 
-    <!-- Progress Bar -->
+    <!-- Thin Lavender-Blue Progress Bar (Matches Video Header) -->
     <div class="w-full h-1 bg-[#eaecf8] overflow-hidden">
       <div id="progressBar" class="h-full bg-[#4f5be8] transition-all duration-200 ease-out" style="width: 0%"></div>
     </div>
@@ -155,21 +150,22 @@
   <main id="canvasContainer" class="relative flex-1 w-full h-full overflow-hidden bg-white cursor-grab active:cursor-grabbing">
     <canvas id="gameCanvas" class="block w-full h-full"></canvas>
 
-    <!-- Top-Center Subtle Status Pill -->
-    <div class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/5 backdrop-blur-xs px-3 py-1 rounded-full text-[11px] font-semibold text-slate-500">
-      <span id="txtRemaining">30 arrows left</span>
-      <span id="txtPlayerName" class="hidden text-indigo-600 font-bold">• 👤 Player</span>
-      <span id="txtPanHint" class="hidden sm:inline text-slate-400">• Tap arrow to shoot • Drag to pan</span>
+    <!-- Top-Center Subtle Status Pill (Remaining Arrows + Unblocked Bottleneck Count) -->
+    <div class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/8 backdrop-blur-xs px-3.5 py-1 rounded-full text-[11px] font-bold text-slate-700 shadow-2xs">
+      <span id="txtRemaining">48 arrows left</span>
+      <span class="text-slate-300">•</span>
+      <span id="txtUnblockedCount" class="text-rose-600 font-extrabold">🔒 Only 1 free move!</span>
+      <span id="txtPanHint" class="hidden md:inline text-slate-400 font-medium">• Drag to pan</span>
     </div>
 
-    <!-- Bottom-Left Zoom Controls -->
+    <!-- Bottom-Left Zoom Controls (Essential for Giant Hard Level) -->
     <div class="absolute bottom-4 left-4 flex items-center gap-1.5 z-10">
       <button id="btnZoomOut" type="button" title="Zoom Out (-)" class="soft-circle-btn w-10 h-10 rounded-full flex items-center justify-center shadow-md font-bold text-lg">−</button>
       <button id="btnZoomReset" type="button" title="Fit Board to Screen" class="soft-circle-btn px-3 h-10 rounded-full flex items-center justify-center shadow-md text-xs font-bold">Fit</button>
       <button id="btnZoomIn" type="button" title="Zoom In (+)" class="soft-circle-btn w-10 h-10 rounded-full flex items-center justify-center shadow-md font-bold text-lg">+</button>
     </div>
 
-    <!-- Bottom-Right '#' Grid/Ray Guide Toggle Button -->
+    <!-- Bottom-Right '#' Grid/Ray Guide Toggle Button (Exact match to video's bottom-right '#' button) -->
     <div class="absolute bottom-4 right-4 flex items-center gap-2 z-10">
       <button id="btnGridToggle" type="button" title="Toggle Grid & Exit Path Guides (#)" class="soft-circle-btn w-11 h-11 rounded-full flex items-center justify-center shadow-md">
         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -181,7 +177,7 @@
       </button>
     </div>
 
-    <!-- VICTORY OVERLAY -->
+    <!-- VICTORY OVERLAY (Matches Video's "Awesome! / Nice! ARROWS Level X" Celebration) -->
     <div id="victoryModal" class="hidden absolute inset-0 z-30 bg-white/85 backdrop-blur-xs flex flex-col items-center justify-center p-6">
       <div class="modal-pop flex flex-col items-center text-center max-w-xs w-full">
         <div class="w-16 h-16 rounded-2xl bg-[#eaecf8] flex items-center justify-center mb-4 shadow-inner">
@@ -195,11 +191,8 @@
         <button id="btnNextLevel" type="button" class="w-full py-3.5 px-6 rounded-full bg-[#b8c0f8] hover:bg-[#9aa5f5] active:scale-95 transition font-extrabold text-slate-900 text-base shadow-md mb-3">
           Play Next Level
         </button>
-        <button id="btnReplayLevel" type="button" class="text-xs font-semibold text-slate-500 hover:text-slate-800 py-1.5 px-4 mb-2">
+        <button id="btnReplayLevel" type="button" class="text-xs font-semibold text-slate-500 hover:text-slate-800 py-1.5 px-4">
           Replay with New Layout
-        </button>
-        <button id="btnShareTg" type="button" class="hidden text-xs font-bold text-indigo-600 hover:text-indigo-800 py-1.5 px-4">
-          📤 Share to Telegram Chat
         </button>
       </div>
     </div>
@@ -266,45 +259,6 @@
 
   <script>
     // =========================================================================
-    // 0. TELEGRAM WEBAPP SDK INTEGRATION & HAPTICS
-    // =========================================================================
-    const tg = window.Telegram?.WebApp;
-    const tgUser = tg?.initDataUnsafe?.user;
-
-    if (tg) {
-      try {
-        tg.ready();
-        tg.expand();
-        if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
-        if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
-      } catch (err) {
-        console.warn('Telegram WebApp init notice:', err);
-      }
-    }
-
-    const Haptics = {
-      impact(style = 'medium') {
-        try { tg?.HapticFeedback?.impactOccurred(style); } catch (e) {}
-      },
-      notification(type = 'success') {
-        try { tg?.HapticFeedback?.notificationOccurred(type); } catch (e) {}
-      },
-      selection() {
-        try { tg?.HapticFeedback?.selectionChanged(); } catch (e) {}
-      }
-    };
-
-    if (tgUser && tgUser.first_name) {
-      const pEl = document.getElementById('txtPlayerName');
-      if (pEl) {
-        pEl.textContent = `• 👤 ${tgUser.first_name}`;
-        pEl.classList.remove('hidden');
-      }
-      const shareBtn = document.getElementById('btnShareTg');
-      if (shareBtn) shareBtn.classList.remove('hidden');
-    }
-
-    // =========================================================================
     // 1. SYNTHESIZED SOUND ENGINE (Web Audio API)
     // =========================================================================
     const Sound = {
@@ -321,7 +275,6 @@
         }
       },
       playWhoosh() {
-        Haptics.impact('light');
         if (this.muted) return;
         this.init();
         if (!this.ctx) return;
@@ -346,7 +299,6 @@
       },
       playBlocked() {
         this.streak = 0;
-        Haptics.notification('error');
         if (this.muted) return;
         this.init();
         if (!this.ctx) return;
@@ -367,7 +319,6 @@
       },
       playVictory() {
         this.streak = 0;
-        Haptics.notification('success');
         if (this.muted) return;
         this.init();
         if (!this.ctx) return;
@@ -390,10 +341,11 @@
     };
 
     // =========================================================================
-    // 2. LEVEL DEFINITIONS & SHAPES
+    // 2. LEVEL DEFINITIONS & SHAPES (Including Video Clip 1 & Video Clip 2)
     // =========================================================================
     const MAX_LEVELS = 5000;
-    const MAX_STEPS_PER_LEVEL = 3;
+    const MAX_STEPS_PER_LEVEL = 1;
+    const MAX_HINTS_PER_LEVEL = 2;
 
     const BOARD_MASKS = [
       {
@@ -460,14 +412,14 @@
       if (lv === 1) {
         return {
           id: 1,
-          name: 'Hard Classic Maze',
-          subtitle: 'High-density winding rectangular maze',
-          difficulty: 'Hard',
-          diffColor: '#2563eb',
-          cols: 14,
-          rows: 18,
-          minLen: 3,
-          maxLen: 18,
+          name: 'Extreme Chain Maze (Video Part 1)',
+          subtitle: 'Single-entry deep chain lock — only 1 arrow can exit at the start!',
+          difficulty: 'Extreme',
+          diffColor: '#dc2626',
+          cols: 16,
+          rows: 20,
+          minLen: 4,
+          maxLen: 22,
           seed: 1049,
           mask: BOARD_MASKS[0].fn
         };
@@ -475,68 +427,54 @@
       if (lv === 2) {
         return {
           id: 2,
-          name: 'Giant Shield Boss',
-          subtitle: 'Massive shield-shaped boss puzzle',
-          difficulty: 'Very Hard',
-          diffColor: '#7c3aed',
-          cols: 19,
-          rows: 21,
+          name: 'Giant Shield Boss (Video Part 2)',
+          subtitle: 'Massive shield-shaped nightmare puzzle — deep interlocking coils',
+          difficulty: 'Insane',
+          diffColor: '#9333ea',
+          cols: 21,
+          rows: 23,
           minLen: 4,
-          maxLen: 20,
+          maxLen: 24,
           seed: 2077,
           mask: BOARD_MASKS[1].fn
         };
       }
 
       const maskObj = BOARD_MASKS[(lv - 1) % BOARD_MASKS.length];
-      let difficulty = 'Hard';
-      let diffColor = '#2563eb';
-      let cols = 15;
-      let rows = 19;
-      let minLen = 3;
-      let maxLen = 18;
+      let difficulty = 'Extreme';
+      let diffColor = '#dc2626';
+      let cols = 17 + (lv % 4);
+      let rows = 20 + (lv % 3);
+      let minLen = 4;
+      let maxLen = 22;
 
-      if (lv >= 4000) {
+      if (lv >= 3500) {
+        difficulty = 'Impossible';
+        diffColor = '#991b1b';
+        cols = 21 + (lv % 2);
+        rows = 24 + (lv % 2);
+        minLen = 4;
+        maxLen = 26;
+      } else if (lv >= 1500) {
         difficulty = 'Nightmare';
         diffColor = '#dc2626';
-        cols = 21;
-        rows = 23;
+        cols = 20 + (lv % 2);
+        rows = 23 + (lv % 2);
         minLen = 4;
-        maxLen = 22;
-      } else if (lv >= 2000) {
-        difficulty = 'Grandmaster';
-        diffColor = '#e11d48';
-        cols = 20;
-        rows = 22;
-        minLen = 4;
-        maxLen = 21;
-      } else if (lv >= 500) {
-        difficulty = 'Master';
+        maxLen = 24;
+      } else if (lv >= 300) {
+        difficulty = 'Insane';
         diffColor = '#9333ea';
-        cols = 19;
-        rows = 21;
+        cols = 19 + (lv % 2);
+        rows = 22 + (lv % 2);
         minLen = 4;
-        maxLen = 20;
-      } else if (lv >= 100) {
-        difficulty = 'Expert';
-        diffColor = '#7c3aed';
-        cols = 17 + (lv % 3);
-        rows = 20 + (lv % 2);
-        minLen = 3;
-        maxLen = 19;
-      } else {
-        difficulty = lv % 2 === 0 ? 'Expert' : 'Hard';
-        diffColor = lv % 2 === 0 ? '#7c3aed' : '#2563eb';
-        cols = 15 + (lv % 4);
-        rows = 19 + (lv % 3);
-        minLen = 3;
-        maxLen = 18;
+        maxLen = 23;
       }
 
       return {
         id: lv,
         name: `${maskObj.title}`,
-        subtitle: `${maskObj.desc} (${cols}×${rows})`,
+        subtitle: `Single-path chain lock • ${cols}×${rows} grid`,
         difficulty,
         diffColor,
         cols,
@@ -561,10 +499,10 @@
     }
 
     const DIRS = [
-      { dr: -1, dc: 0 },
-      { dr: 1, dc: 0 },
-      { dr: 0, dc: -1 },
-      { dr: 0, dc: 1 }
+      { dr: -1, dc: 0 }, // UP
+      { dr: 1, dc: 0 },  // DOWN
+      { dr: 0, dc: -1 }, // LEFT
+      { dr: 0, dc: 1 }   // RIGHT
     ];
 
     function keyOf(r, c) {
@@ -595,7 +533,9 @@
             }
           }
         }
+        // Any isolated single cell cannot form a 2+ cell arrow
         if (comp.length < 2) return true;
+        // A 4-cell claw graph K_{1,3} cannot be partitioned into paths of length >= 2
         if (comp.length === 4) {
           const compSet = new Set(comp);
           for (const ck of comp) {
@@ -614,29 +554,49 @@
     function generateSolvableBoard(config, seedOffset = 0) {
       const { rows, cols, mask, minLen, maxLen, seed } = config;
       const baseGridDots = [];
+      const allBoardKeys = new Set();
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (!mask || mask(r, c, rows, cols)) {
-            baseGridDots.push({ r, c, key: keyOf(r, c) });
+            const k = keyOf(r, c);
+            baseGridDots.push({ r, c, key: k });
+            allBoardKeys.add(k);
           }
         }
       }
 
+      let bestBoard = null;
+      let bestChainScore = -1;
+
       for (let attempt = 0; attempt < 60; attempt++) {
         const rng = createSeededRandom(seed + seedOffset * 7919 + attempt * 997);
-        const rem = new Set(baseGridDots.map(d => d.key));
+        const rem = new Set(allBoardKeys);
         const arrows = [];
+        let prev1Cells = new Set();
+        let prev2Cells = new Set();
+        let chainHits = 0;
         let ok = true;
 
-        const isRayClear = (r, c, dr, dc) => {
+        // Evaluates whether the ray ahead of (r, c) in direction (dr, dc) is clear of remaining cells,
+        // and checks if it passes through the immediately preceding arrow (prev1Cells) to form a strict lock chain!
+        const analyzeExitRay = (r, c, dr, dc) => {
           let nr = r + dr;
           let nc = c + dc;
+          let hitsPrev1 = false;
+          let hitsPrev2 = false;
+          let clearedCrossings = 0;
           while (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-            if (rem.has(keyOf(nr, nc))) return false;
+            const nk = keyOf(nr, nc);
+            if (rem.has(nk)) return null; // Blocked by unpeeled cell
+            if (allBoardKeys.has(nk)) {
+              clearedCrossings++;
+              if (prev1Cells.has(nk)) hitsPrev1 = true;
+              if (prev2Cells.has(nk)) hitsPrev2 = true;
+            }
             nr += dr;
             nc += dc;
           }
-          return true;
+          return { hitsPrev1, hitsPrev2, clearedCrossings };
         };
 
         while (rem.size > 0) {
@@ -650,22 +610,43 @@
             for (let i = 0; i < 4; i++) {
               const { dr, dc } = DIRS[i];
               const neckKey = keyOf(r - dr, c - dc);
-              if (rem.has(neckKey) && isRayClear(r, c, dr, dc)) {
-                candidates.push({
-                  deg,
-                  rand: rng(),
-                  head: { r, c, key: k },
-                  dir: { dr, dc },
-                  neck: { r: r - dr, c: c - dc, key: neckKey }
-                });
+              if (rem.has(neckKey)) {
+                const rayInfo = analyzeExitRay(r, c, dr, dc);
+                if (rayInfo !== null) {
+                  let tier = 3;
+                  if (arrows.length === 0) {
+                    tier = 0;
+                  } else if (rayInfo.hitsPrev1) {
+                    tier = 0; // Directly locked behind the immediately preceding arrow!
+                  } else if (rayInfo.hitsPrev2) {
+                    tier = 1; // Locked behind 2 steps ago
+                  } else if (rayInfo.clearedCrossings > 0) {
+                    tier = 2; // Locked behind an earlier interior arrow (not pointing out of boundary)
+                  }
+                  candidates.push({
+                    tier,
+                    deg,
+                    clearedCrossings: rayInfo.clearedCrossings,
+                    rand: rng(),
+                    head: { r, c, key: k },
+                    dir: { dr, dc },
+                    neck: { r: r - dr, c: c - dc, key: neckKey }
+                  });
+                }
               }
             }
           }
 
-          candidates.sort((a, b) => (a.deg - b.deg) || (a.rand - b.rand));
+          // Sort by strictest dependency tier first, then degree-1 leaf priority, then deepest interior ray
+          candidates.sort((a, b) =>
+            (a.tier - b.tier) ||
+            (a.deg - b.deg) ||
+            (b.clearedCrossings - a.clearedCrossings) ||
+            (a.rand - b.rand)
+          );
 
           let placed = false;
-          const limit = Math.min(candidates.length, 45);
+          const limit = Math.min(candidates.length, 50);
           for (let idx = 0; idx < limit; idx++) {
             const cand = candidates[idx];
             const targetLen = minLen + Math.floor(rng() * (maxLen - minLen + 1));
@@ -690,7 +671,8 @@
                     if (rem.has(nnk) && !pathKeys.has(nnk)) nDeg++;
                   }
                   const isTurn = (ndr !== prevDr || ndc !== prevDc);
-                  const weight = nDeg === 0 ? 9 : (nDeg === 1 ? 5 : (isTurn ? 5 : 1));
+                  // Heavy turn weight (8 vs 1) creates labyrinthine S-bends, hooks, and spirals
+                  const weight = nDeg === 0 ? 15 : (nDeg === 1 ? 8 : (isTurn ? 8 : 1));
                   for (let w = 0; w < weight; w++) {
                     weightedNbrs.push({ r: nr, c: nc, key: nk, dr: ndr, dc: ndc });
                   }
@@ -716,7 +698,15 @@
               const testRem = new Set(rem);
               for (const p of path) testRem.delete(p.key);
               if (!hasBadComponent(testRem)) {
-                for (const p of path) rem.delete(p.key);
+                const newSet = new Set();
+                for (const p of path) {
+                  rem.delete(p.key);
+                  newSet.add(p.key);
+                }
+                if (cand.tier <= 1) chainHits++;
+                prev2Cells = prev1Cells;
+                prev1Cells = newSet;
+
                 const pts = path.slice().reverse().map(p => ({ r: p.r, c: p.c }));
                 arrows.push({
                   id: arrows.length + 1,
@@ -741,10 +731,19 @@
         }
 
         if (ok && rem.size === 0) {
-          return { dots: baseGridDots, arrows, rows, cols };
+          const ratio = chainHits / Math.max(1, arrows.length);
+          if (ratio > bestChainScore) {
+            bestChainScore = ratio;
+            bestBoard = { dots: baseGridDots, arrows, rows, cols };
+          }
+          // Try up to 3 valid boards and pick the tightest single-path chain lock!
+          if (bestBoard && attempt >= 2) {
+            return bestBoard;
+          }
         }
       }
 
+      if (bestBoard) return bestBoard;
       return { dots: baseGridDots, arrows: [], rows, cols };
     }
 
@@ -761,14 +760,16 @@
       cols: 11,
       hearts: 3,
       maxHearts: 3,
-      stepsLeft: 3,
-      maxSteps: 3,
+      stepsLeft: 1,
+      maxSteps: 1,
+      hintsLeft: 2,
+      maxHints: 2,
       showGridGuides: false,
       hoveredArrowId: null,
-      tapRipples: [],
-      collisionRipples: [],
+      tapRipples: [],      // [{x, y, radius, alpha}] in world coordinates
+      collisionRipples: [],// [{r, c, radius, alpha}] in grid coordinates
       confetti: [],
-      victoryWaveTime: -1,
+      victoryWaveTime: -1, // >= 0 during the dot ripple celebration
       victoryShown: false,
       camera: {
         x: 0,
@@ -815,6 +816,7 @@
     function resetCamera() {
       state.camera.x = 0;
       state.camera.y = 0;
+      // On giant levels (rows >= 19), start slightly zoomed so arrows are crisp & pan-friendly
       state.camera.zoom = state.rows >= 19 ? 1.15 : 1.0;
     }
 
@@ -849,13 +851,19 @@
     // =========================================================================
     // 5. SLITHERING SNAKE-ARROW GEOMETRY & COLLISION LOGIC
     // =========================================================================
+    // Given an arrow with initial grid points P = [p_0, ..., p_{L-1}] and forward offset s >= 0:
+    // Returns the active polyline vertices in grid coordinates (r, c).
     function getArrowPolyline(arrow) {
       const pts = arrow.points;
       const L = pts.length;
       const s = arrow.offset;
-      if (s <= 0.0001) return pts;
+      if (s <= 0.0001) {
+        return pts;
+      }
       const { dr, dc } = arrow.dir;
 
+      // Track coordinate u in [0, infinity):
+      // For u in [0, L-1], interpolate along pts; for u > L-1, project from pts[L-1] along dir
       const evalTrack = (u) => {
         if (u <= 0) return { r: pts[0].r, c: pts[0].c };
         if (u < L - 1) {
@@ -888,6 +896,7 @@
       return poly;
     }
 
+    // Checks if an idle arrow has a completely clear forward ray, or returns the first blocking cell & arrow
     function checkArrowPath(targetArrow) {
       const occupied = new Map();
       for (const a of state.arrows) {
@@ -919,9 +928,10 @@
       return { clear: true };
     }
 
+    // Hit-test which idle arrow is closest to grid coordinate (gr, gc)
     function findArrowAtGridPos(gr, gc) {
       let bestArrow = null;
-      let bestDist = 0.62;
+      let bestDist = 0.62; // Generous tap radius in grid units
 
       for (const arrow of state.arrows) {
         if (arrow.state !== 'idle') continue;
@@ -929,6 +939,7 @@
         for (let i = 0; i < pts.length - 1; i++) {
           const p1 = pts[i];
           const p2 = pts[i + 1];
+          // Distance from point (gr, gc) to segment p1-p2
           const vx = p2.c - p1.c;
           const vy = p2.r - p1.r;
           const wx = gc - p1.c;
@@ -961,6 +972,7 @@
         });
       }
 
+      // Clear all hint glows when user acts
       for (const a of state.arrows) a.hintGlow = 0;
 
       const check = checkArrowPath(arrow);
@@ -974,8 +986,9 @@
       } else {
         arrow.state = 'blocked';
         arrow.offset = 0;
+        // Slide forward up to right before the blocking arrow
         arrow.maxOffset = Math.min(Math.max(0.38, check.dist - 0.52), 2.4);
-        arrow.blockedPhase = 0;
+        arrow.blockedPhase = 0; // 0 = moving forward to hit, 1 = recoiling back
         arrow.hitCell = check.hitCell;
         if (check.blockerArrow) {
           check.blockerArrow.blockerFlash = 1.0;
@@ -1015,6 +1028,16 @@
       }
     }
 
+    function countUnblockedArrows() {
+      let count = 0;
+      for (const a of state.arrows) {
+        if (a.state === 'idle' && checkArrowPath(a).clear) {
+          count++;
+        }
+      }
+      return count;
+    }
+
     function updateProgressUI() {
       const total = state.arrows.length;
       const remaining = state.arrows.filter(a => a.state === 'idle' || a.state === 'blocked').length;
@@ -1024,17 +1047,26 @@
       document.getElementById('txtRemaining').textContent =
         remaining === 0 ? 'All cleared!' : `${remaining} arrow${remaining === 1 ? '' : 's'} left`;
 
+      const unblockedEl = document.getElementById('txtUnblockedCount');
+      if (unblockedEl) {
+        if (remaining === 0) {
+          unblockedEl.textContent = '✨ Board Solved!';
+          unblockedEl.className = 'text-emerald-600 font-extrabold';
+        } else {
+          const freeCount = countUnblockedArrows();
+          unblockedEl.textContent = freeCount === 1
+            ? '🔒 Only 1 free move!'
+            : `🔒 ${freeCount} free moves`;
+          unblockedEl.className = freeCount <= 1
+            ? 'text-rose-600 font-extrabold'
+            : 'text-indigo-600 font-extrabold';
+        }
+      }
+
       if (remaining === 0 && total > 0 && state.victoryWaveTime < 0 && !state.victoryShown) {
         state.victoryWaveTime = 0;
         Sound.playVictory();
         spawnVictoryConfetti();
-        // Optional Telegram WebApp event send
-        if (tg && typeof tg.sendData === 'function') {
-          // You can also notify bot if opened as keyboard WebApp
-          try {
-            // Note: sendData only works when launched via KeyboardButton
-          } catch(e) {}
-        }
       }
     }
 
@@ -1060,11 +1092,7 @@
     function showVictoryModal() {
       state.victoryShown = true;
       const praises = ['Awesome!', 'Nice!', 'Brilliant!', 'Unstoppable!'];
-      let praise = praises[(state.currentLevelNum - 1) % praises.length];
-      if (tgUser && tgUser.first_name) {
-        praise = `${praise}, ${tgUser.first_name}!`;
-      }
-      document.getElementById('victoryPraise').textContent = praise;
+      document.getElementById('victoryPraise').textContent = praises[(state.currentLevelNum - 1) % praises.length];
       document.getElementById('victoryLevelLabel').textContent = `Level ${state.currentLevelNum} of ${MAX_LEVELS}`;
       const diffEl = document.getElementById('victoryDiffLabel');
       diffEl.textContent = state.config.difficulty;
@@ -1086,6 +1114,17 @@
         btnEl.classList.toggle('opacity-50', state.stepsLeft <= 0);
         btnEl.classList.toggle('cursor-not-allowed', state.stepsLeft <= 0);
       }
+
+      const hintQuotaEl = document.getElementById('txtHintQuota');
+      const hintBtnEl = document.getElementById('btnHint');
+      if (hintQuotaEl) {
+        hintQuotaEl.textContent = `${state.hintsLeft}/${state.maxHints}`;
+      }
+      if (hintBtnEl) {
+        hintBtnEl.disabled = state.hintsLeft <= 0;
+        hintBtnEl.classList.toggle('opacity-50', state.hintsLeft <= 0);
+        hintBtnEl.classList.toggle('cursor-not-allowed', state.hintsLeft <= 0);
+      }
     }
 
     function loadLevel(levelNum, seedOffset = 0) {
@@ -1103,6 +1142,8 @@
       state.hearts = 3;
       state.stepsLeft = MAX_STEPS_PER_LEVEL;
       state.maxSteps = MAX_STEPS_PER_LEVEL;
+      state.hintsLeft = MAX_HINTS_PER_LEVEL;
+      state.maxHints = MAX_HINTS_PER_LEVEL;
       state.victoryWaveTime = -1;
       state.victoryShown = false;
       state.tapRipples = [];
@@ -1136,12 +1177,15 @@
     }
 
     function triggerHint() {
-      Haptics.impact('light');
+      if (state.hintsLeft <= 0) return;
       const arrow = findHintArrow();
       if (!arrow) return;
+      state.hintsLeft--;
+      updateStepButtonUI();
       for (const a of state.arrows) a.hintGlow = 0;
       arrow.hintGlow = 1.0;
 
+      // Center camera smoothly if zoomed in
       if (state.camera.zoom > 1.15) {
         const head = arrow.points[arrow.points.length - 1];
         const cs = state.camera.baseCellSize * state.camera.zoom;
@@ -1168,6 +1212,7 @@
       const inp = document.getElementById('inpJumpLevel');
       if (inp) inp.value = state.currentLevelNum;
 
+      // Build a curated list showing nearby levels around currentLevelNum + milestone levels up to 5000
       const levelSet = new Set([1, 2, 3, 4, 5]);
       for (let d = -2; d <= 5; d++) {
         const cand = state.currentLevelNum + d;
@@ -1196,10 +1241,7 @@
           </div>
           <span class="text-xs font-bold shrink-0 ${isCurrent ? 'text-[#4f5be8]' : 'text-slate-400'}">${isCurrent ? 'Playing' : 'Play →'}</span>
         `;
-        btn.addEventListener('click', () => {
-          Haptics.selection();
-          loadLevel(i, 0);
-        });
+        btn.addEventListener('click', () => loadLevel(i, 0));
         list.appendChild(btn);
       }
     }
@@ -1218,6 +1260,7 @@
 
       const cs = state.camera.baseCellSize * state.camera.zoom;
 
+      // 1. Optional faint grid & exit ray guides when '#' toggle is active
       if (state.showGridGuides) {
         ctx.save();
         ctx.strokeStyle = 'rgba(100, 116, 139, 0.12)';
@@ -1241,6 +1284,7 @@
         ctx.restore();
       }
 
+      // 2. Draw Grid Dots (with Victory Wave animation like 00:32 of the video)
       if (state.victoryWaveTime >= 0) {
         state.victoryWaveTime += dt;
         if (state.victoryWaveTime > 0.78 && !state.victoryShown) {
@@ -1274,6 +1318,7 @@
         ctx.fill();
       }
 
+      // 3. If '#' guide mode is on and an arrow is hovered, draw its forward exit ray
       if (state.showGridGuides && state.hoveredArrowId !== null) {
         const hov = state.arrows.find(a => a.id === state.hoveredArrowId && a.state === 'idle');
         if (hov) {
@@ -1296,6 +1341,7 @@
         }
       }
 
+      // 4. Update & Draw Arrows
       const shaftWidth = Math.max(2.6, cs * 0.135);
       const headLen = Math.max(6.5, cs * 0.30);
       const headHalfW = Math.max(4.8, cs * 0.22);
@@ -1303,14 +1349,16 @@
       for (const arrow of state.arrows) {
         if (arrow.state === 'removed') continue;
 
+        // Animate exiting arrows (fast slither along bends and out!)
         if (arrow.state === 'exiting') {
-          arrow.offset += dt * 36;
+          arrow.offset += dt * 36; // 36 grid cells per second
           if (arrow.offset >= arrow.maxOffset) {
             arrow.state = 'removed';
             continue;
           }
         }
 
+        // Animate blocked arrows (slither to obstacle, flash collision, recoil back)
         if (arrow.state === 'blocked') {
           if (arrow.blockedPhase === 0) {
             arrow.offset += dt * 16;
@@ -1342,13 +1390,14 @@
         const poly = getArrowPolyline(arrow);
         if (poly.length < 2) continue;
 
-        let color = '#0a0d14';
+        // Determine stroke & fill color
+        let color = '#0a0d14'; // Crisp deep black like the video
         if (arrow.state === 'exiting') {
-          color = '#4353ff';
+          color = '#4353ff'; // Royal indigo-blue exit trail from the video
         } else if (arrow.state === 'blocked') {
-          color = '#ef4444';
+          color = '#ef4444'; // Red on collision
         } else if (arrow.blockerFlash > 0) {
-          color = '#f97316';
+          color = '#f97316'; // Briefly highlight the obstacle arrow that blocked you
         } else if (arrow.hintGlow > 0) {
           color = '#4353ff';
         } else if (state.hoveredArrowId === arrow.id) {
@@ -1368,6 +1417,7 @@
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
+        // Convert grid polyline to screen coordinates
         const screenPts = poly.map(pt => gridToScreen(pt.r, pt.c));
         const tip = screenPts[screenPts.length - 1];
         const prev = screenPts[screenPts.length - 2];
@@ -1377,6 +1427,7 @@
         const ux = segLen > 0.001 ? dx / segLen : arrow.dir.dc;
         const uy = segLen > 0.001 ? dy / segLen : arrow.dir.dr;
 
+        // Draw shaft slightly recessed behind the tip so the arrowhead apex is razor sharp
         ctx.beginPath();
         ctx.moveTo(screenPts[0].x, screenPts[0].y);
         for (let i = 1; i < screenPts.length - 1; i++) {
@@ -1387,6 +1438,7 @@
         ctx.lineTo(shaftEndX, shaftEndY);
         ctx.stroke();
 
+        // Draw crisp triangular arrowhead at tip
         const apexX = tip.x + ux * (headLen * 0.22);
         const apexY = tip.y + uy * (headLen * 0.22);
         const baseX = apexX - ux * headLen;
@@ -1404,6 +1456,7 @@
         ctx.restore();
       }
 
+      // 5. Draw Tap Ripples (Matches the gray-blue touch indicator in the video)
       for (let i = state.tapRipples.length - 1; i >= 0; i--) {
         const rp = state.tapRipples[i];
         rp.radius += dt * 1.8;
@@ -1421,6 +1474,7 @@
         ctx.restore();
       }
 
+      // 6. Draw Collision Ripples
       for (let i = state.collisionRipples.length - 1; i >= 0; i--) {
         const cr = state.collisionRipples[i];
         cr.radius += dt * 2.2;
@@ -1439,11 +1493,12 @@
         ctx.restore();
       }
 
+      // 7. Draw Victory Confetti
       for (let i = state.confetti.length - 1; i >= 0; i--) {
         const p = state.confetti[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.22;
+        p.vy += 0.22; // gravity
         p.vx *= 0.99;
         p.rot += p.vrot;
         if (p.y > rect.height + 40) {
@@ -1462,7 +1517,7 @@
     }
 
     // =========================================================================
-    // 8. INPUT HANDLERS
+    // 8. INPUT HANDLERS (TAP TO SHOOT, DRAG TO PAN, WHEEL/PINCH TO ZOOM)
     // =========================================================================
     function getPointerPos(e) {
       const rect = canvas.getBoundingClientRect();
@@ -1502,6 +1557,7 @@
           state.camera.y = state.drag.camStartY + dy;
         }
       } else {
+        // Hover detection
         const g = screenToGridFloat(pos.x, pos.y);
         const arrow = findArrowAtGridPos(g.r, g.c);
         state.hoveredArrowId = arrow ? arrow.id : null;
@@ -1524,6 +1580,7 @@
       }
     });
 
+    // Touch support (Tap + Drag Pan + 2-Finger Pinch Zoom)
     canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         e.preventDefault();
@@ -1596,10 +1653,9 @@
     }, { passive: false });
 
     // =========================================================================
-    // 9. BUTTON LISTENERS & TELEGRAM SHARE
+    // 9. BUTTON LISTENERS & KEYBOARD SHORTCUTS
     // =========================================================================
     document.getElementById('btnRestart').addEventListener('click', () => {
-      Haptics.selection();
       loadLevel(state.currentLevelNum, state.seedOffset);
     });
 
@@ -1608,51 +1664,42 @@
     });
 
     document.getElementById('btnStep').addEventListener('click', () => {
-      Haptics.impact('heavy');
       triggerAutoStep();
     });
 
     document.getElementById('btnSound').addEventListener('click', () => {
-      Haptics.selection();
       Sound.muted = !Sound.muted;
       document.getElementById('iconSoundOn').classList.toggle('hidden', Sound.muted);
       document.getElementById('iconSoundOff').classList.toggle('hidden', !Sound.muted);
     });
 
     document.getElementById('btnGridToggle').addEventListener('click', (e) => {
-      Haptics.selection();
       state.showGridGuides = !state.showGridGuides;
       e.currentTarget.classList.toggle('active-toggle', state.showGridGuides);
     });
 
     document.getElementById('btnZoomIn').addEventListener('click', () => {
-      Haptics.selection();
       state.camera.zoom = Math.min(2.6, state.camera.zoom * 1.18);
     });
 
     document.getElementById('btnZoomOut').addEventListener('click', () => {
-      Haptics.selection();
       state.camera.zoom = Math.max(0.65, state.camera.zoom / 1.18);
     });
 
     document.getElementById('btnZoomReset').addEventListener('click', () => {
-      Haptics.selection();
       resetCamera();
     });
 
     document.getElementById('btnLevels').addEventListener('click', () => {
-      Haptics.selection();
       populateLevelsModal();
       document.getElementById('levelsModal').classList.remove('hidden');
     });
 
     document.getElementById('btnCloseLevels').addEventListener('click', () => {
-      Haptics.selection();
       document.getElementById('levelsModal').classList.add('hidden');
     });
 
     document.getElementById('btnJumpLevel').addEventListener('click', () => {
-      Haptics.selection();
       const val = parseInt(document.getElementById('inpJumpLevel').value, 10);
       if (!isNaN(val)) {
         loadLevel(Math.max(1, Math.min(MAX_LEVELS, val)), 0);
@@ -1667,50 +1714,32 @@
 
     document.querySelectorAll('.tier-jump-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        Haptics.selection();
         const target = parseInt(btn.getAttribute('data-jump'), 10);
         if (!isNaN(target)) loadLevel(target, 0);
       });
     });
 
     document.getElementById('btnShuffleCurrent').addEventListener('click', () => {
-      Haptics.selection();
       loadLevel(state.currentLevelNum, state.seedOffset + 1);
     });
 
     document.getElementById('btnNextLevel').addEventListener('click', () => {
-      Haptics.selection();
       loadLevel(state.currentLevelNum + 1, 0);
     });
 
     document.getElementById('btnReplayLevel').addEventListener('click', () => {
-      Haptics.selection();
       loadLevel(state.currentLevelNum, state.seedOffset + 1);
     });
 
     document.getElementById('btnRevive').addEventListener('click', () => {
-      Haptics.impact('medium');
       state.hearts = 3;
       renderHearts();
       document.getElementById('gameOverModal').classList.add('hidden');
     });
 
     document.getElementById('btnGameOverRestart').addEventListener('click', () => {
-      Haptics.selection();
       loadLevel(state.currentLevelNum, state.seedOffset);
     });
-
-    const shareBtn = document.getElementById('btnShareTg');
-    if (shareBtn) {
-      shareBtn.addEventListener('click', () => {
-        const text = encodeURIComponent(`🎮 I just cleared Level ${state.currentLevelNum} in Arrows Puzzle! Can you beat my score?`);
-        if (tg && tg.openTelegramLink) {
-          tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${text}`);
-        } else {
-          window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${text}`, '_blank');
-        }
-      });
-    }
 
     window.addEventListener('keydown', (e) => {
       if (e.key === 'h' || e.key === 'H') triggerHint();
